@@ -68,12 +68,20 @@ namespace freedman
                 var filtered = new string(messageParts[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
                 quantity = double.Parse(filtered);
                 unit = messageParts[1].Substring(messageParts[1].IndexOf(filtered) + filtered.Length);
+                if (messageParts.Count > 2 && IsValidSecondWordUnit(unit, messageParts[2]))
+                {
+                    unit += " " + messageParts[2];
+                }
             }
             else
             {
                 if (messageParts.Count <= 2)
                     return;
                 unit = messageParts[2];
+                if (messageParts.Count > 3 && IsValidSecondWordUnit(unit, messageParts[3]))
+                {
+                    unit += " " + messageParts[3];
+                }
             }
 
             var converted = await Convert(quantity, unit);
@@ -100,9 +108,14 @@ namespace freedman
             {
                 case "c":
                 case "celsius":
+                case "degrees c":
+                case "degrees celsius":
                     return (quantity * 1.8 + 32.0, "farenheit");
+
                 case "f":
                 case "farenheit":
+                case "degrees f":
+                case "degrees farenheit":
                     return ((quantity - 32.0) / 1.8, "celsius");
 
                 case "gal":
@@ -201,9 +214,54 @@ namespace freedman
                 case "kilogram":
                 case "kilograms":
                     return (quantity * 2.20462262, "pounds");
+
+                case "washroom":
+                    return (quantity, "bathroom");
+                case "bathroom":
+                    return (quantity, "washroom");
+
+                case "ly":
+                case "light years":
+                case "lightyears":
+                    return (quantity * 63241.0771, "AU");
+
+                case "au":
+                case "astronomical units":
+                    return (quantity / 63241.0771, "light years");
+
+                case "football field":
+                case "football fields":
+                    return (quantity * 1570.90909090, "big macs");
+
+                case "big mac":
+                case "big macs":
+                    return (quantity / 1570.90909090, "football fields");
             }
 
             return null;
+        }
+
+        private static bool IsValidSecondWordUnit(string firstPart, string secondPart)
+        {
+            var secondPartLower = secondPart.ToLower();
+            switch (firstPart.ToLower())
+            {
+                case "degrees":
+                    return secondPartLower == "f" || secondPartLower == "c" || secondPartLower == "farenheit" || secondPartLower == "celsius";
+                case "fl":
+                case "fluid":
+                    return secondPartLower == "oz" || secondPartLower == "ozs" || secondPartLower == "ounce" || secondPartLower == "ounces";
+                case "light":
+                    return secondPartLower == "years";
+                case "astronomical":
+                    return secondPartLower == "units";
+                case "big":
+                    return secondPartLower == "mac" || secondPartLower == "macs";
+                case "football":
+                    return secondPartLower == "field" || secondPartLower == "fields";
+            }
+
+            return false;
         }
     }
 }
