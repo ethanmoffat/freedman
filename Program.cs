@@ -189,6 +189,18 @@ namespace freedman
                 case "inches":
                 case "inch":
                     return (quantity * 2.54, "centimeters");
+
+                case "#":
+                case "lbs":
+                case "lb":
+                case "pound":
+                case "pounds":
+                    return (quantity / 2.20462262, "kilograms");
+
+                case "kg":
+                case "kilogram":
+                case "kilograms":
+                    return (quantity * 2.20462262, "pounds");
             }
 
             return null;
