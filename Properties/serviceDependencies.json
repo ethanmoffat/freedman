@@ -3,6 +3,10 @@
     "appConfig1": {
       "type": "appConfig",
       "connectionId": "AppConfig"
+    },
+    "storage1": {
+      "type": "storage",
+      "connectionId": "freedman-storage"
     }
   }
 }

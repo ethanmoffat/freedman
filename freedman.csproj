@@ -5,6 +5,7 @@
     <UserSecretsId>f861248e-b06a-442c-bac2-e5d9f33548b2</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" Version="12.1.0" />
     <PackageReference Include="DSharpPlus" Version="3.2.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="4.4.0" />
   </ItemGroup>

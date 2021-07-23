@@ -5,6 +5,12 @@
       "type": "appConfig.azure",
       "connectionId": "AppConfig",
       "secretStore": "AzureAppSettings"
+    },
+    "storage1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.Storage/storageAccounts/freedmanstorage",
+      "type": "storage.azure",
+      "connectionId": "freedman-storage",
+      "secretStore": "AzureAppSettings"
     }
   }
 }

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Data.Tables;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +24,9 @@ namespace freedman
         private static DateTime _lastFetchCadUsd;
 
         private static IConfigurationRoot _config;
+        private static TableClient _tableClient;
+
+        private static IDictionary<ulong, int> _precision;
 
         public static async Task Main(string[] args)
         {
@@ -33,9 +39,14 @@ namespace freedman
             _lastFetchUsdCad = DateTime.Now;
             _lastFetchCadUsd = DateTime.Now;
 
+            _precision = new Dictionary<ulong, int>();
+
+            DiscordClient discordClient = null;
             try
             {
-                var discordClient = new DiscordClient(new DiscordConfiguration
+                _tableClient = new TableClient(_config["freedman-storage"], "freedmanprecision");
+
+                discordClient = new DiscordClient(new DiscordConfiguration
                 {
                     Token = _config["freeman-token"],
                     TokenType = TokenType.Bot
@@ -46,20 +57,85 @@ namespace freedman
                 await discordClient.ConnectAsync();
                 await Task.Delay(-1);
             }
-            catch
+            finally
             {
                 _httpClient.Dispose();
+                await discordClient?.DisconnectAsync();
+                discordClient?.Dispose();
             }
         }
 
         private static async Task OnMessageCreated(MessageCreateEventArgs e)
         {
-            if (!e.Message.Content.StartsWith("!convert ", StringComparison.OrdinalIgnoreCase))
+            if (e.Author.IsBot)
                 return;
 
-            var messageParts = e.Message.Content.Split(" ").ToList();
+            List<string> messageParts;
+
+            if (e.Message.Content.StartsWith("!precision ", StringComparison.OrdinalIgnoreCase))
+            {
+                messageParts = e.Message.Content.Split(" ").ToList();
+                if (messageParts.Count <= 1)
+                    return;
+
+                if (!int.TryParse(messageParts[1], out var precision) || precision < 0 || precision > 10)
+                {
+                    await e.Message.RespondAsync("Precision must be an integer between 0 and 10");
+                    return;
+                }
+
+                // todo: connect to cosmos and store precision for a given server
+                // todo: cache precision values per server instead of fetching them every time
+                PrecisionTableRecord precisionRecord;
+                try
+                {
+                    precisionRecord = await _tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
+                    precisionRecord.Precision = precision;
+                    await _tableClient.UpdateEntityAsync(precisionRecord, ETag.All, TableUpdateMode.Replace);
+                }
+                catch (RequestFailedException)
+                {
+                    // entity doesn't exist
+                    precisionRecord = new PrecisionTableRecord
+                    {
+                        ETag = ETag.All,
+                        PartitionKey = $"{e.Guild.Id}",
+                        Timestamp = DateTime.Now,
+                        Precision = precision
+                    };
+                    await _tableClient.AddEntityAsync(precisionRecord);
+                }
+
+                _precision[e.Guild.Id] = precision;
+
+                await e.Message.RespondAsync($"Precision for {e.Guild.Name} set to {precision}");
+                return;
+            }
+            else if (e.Message.Content.Equals("!help", StringComparison.OrdinalIgnoreCase))
+            {
+                await e.Message.RespondAsync("Use `!convert {value} {units}` to convert units or `!precision {value}` to set precision of values");
+                return;
+            }
+            else if (!e.Message.Content.StartsWith("!convert ", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            messageParts = e.Message.Content.Split(" ").ToList();
             if (messageParts.Count <= 1)
                 return;
+
+            if (!_precision.ContainsKey(e.Guild.Id))
+            {
+                try
+                {
+                    PrecisionTableRecord precisionRecord = await _tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
+                    _precision[e.Guild.Id] = precisionRecord.Precision;
+                }
+                catch (RequestFailedException)
+                {
+                    // entity doesn't exist
+                    _precision[e.Guild.Id] = 4;
+                }
+            }
 
             double quantity = 0;
             var unit = string.Empty;
@@ -96,7 +172,7 @@ namespace freedman
 
             var message = converted == null
                 ? $"I don't know how to convert {unit} into something"
-                : $"{quantity}{extra} {unit} is {converted?.Quantity}{extra2} {converted?.Unit}";
+                : $"{quantity}{extra} {unit} is {Math.Round(converted.Value.Quantity, _precision[e.Guild.Id])}{extra2} {converted?.Unit}";
 
             await e.Message.RespondAsync(message);
         }
