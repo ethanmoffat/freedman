@@ -160,7 +160,16 @@ namespace freedman
                 }
             }
 
-            var converted = await Convert(quantity, unit);
+            (double Quantity, string Unit)? converted;
+            try
+            {
+                converted = await Convert(quantity, unit);
+            }
+            catch (RequestFailedException rfe)
+            {
+                await e.Message.RespondAsync(rfe.Message);
+                return;
+            }
 
             var extra = quantity.ToString().Split(".")[0] == "69"
                 ? " (nice)"
@@ -206,44 +215,56 @@ namespace freedman
                     return ((quantity / 3.78541178), "gallons");
 
                 case "usd":
-                {
-                    try
                     {
-                        if ((DateTime.Now - _lastFetchUsdCad).TotalHours > 1 || USD_CAD == 0.0)
+                        try
                         {
-                            using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "USD_CAD", _config["currency-api-key"]));
-                            var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { USD_CAD = 0.0 });
-                            USD_CAD = json.USD_CAD;
-                            _lastFetchUsdCad = DateTime.Now;
-                        }
+                            if ((DateTime.Now - _lastFetchUsdCad).TotalHours > 1 || USD_CAD == 0.0)
+                            {
+                                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "USD_CAD", _config["currency-api-key"]));
+                                if (!response.IsSuccessStatusCode)
+                                    throw new RequestFailedException($"Unable to contact currency conversion API (code {response.StatusCode})\nService status: https://www.currencyconverterapi.com/server-status");
+                                var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { USD_CAD = 0.0 });
+                                USD_CAD = json.USD_CAD;
+                                _lastFetchUsdCad = DateTime.Now;
+                            }
 
-                        return (quantity * USD_CAD, "CAD");
+                            return (quantity * USD_CAD, "CAD");
+                        }
+                        catch (RequestFailedException)
+                        {
+                            throw;
+                        }
+                        catch
+                        {
+                            break;
+                        }
                     }
-                    catch
-                    {
-                        break;
-                    }
-                }
 
                 case "cad":
-                {
-                    try
                     {
-                        if ((DateTime.Now - _lastFetchCadUsd).TotalHours > 1 || CAD_USD == 0.0)
+                        try
                         {
-                            using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "CAD_USD", _config["currency-api-key"]));
-                            var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { CAD_USD = 0.0 });
-                            CAD_USD = json.CAD_USD;
-                            _lastFetchCadUsd = DateTime.Now;
-                        }
+                            if ((DateTime.Now - _lastFetchCadUsd).TotalHours > 1 || CAD_USD == 0.0)
+                            {
+                                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "CAD_USD", _config["currency-api-key"]));
+                                if (!response.IsSuccessStatusCode)
+                                    throw new RequestFailedException($"Unable to contact currency conversion API (code {response.StatusCode})\nService status: https://www.currencyconverterapi.com/server-status");
+                                var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { CAD_USD = 0.0 });
+                                CAD_USD = json.CAD_USD;
+                                _lastFetchCadUsd = DateTime.Now;
+                            }
 
-                        return (quantity * CAD_USD, "USD");
+                            return (quantity * CAD_USD, "USD");
+                        }
+                        catch (RequestFailedException)
+                        {
+                            throw;
+                        }
+                        catch
+                        {
+                            break;
+                        }
                     }
-                    catch
-                    {
-                        break;
-                    }
-                }
 
                 case "km":
                 case "kilometer":
