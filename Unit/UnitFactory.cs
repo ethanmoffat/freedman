@@ -22,5 +22,11 @@ namespace freedman.Unit
             var converter = _converters.SingleOrDefault(x => x.IsConverterFor(dummyUnit));
             return converter?.UnitFactory(value, units) ?? throw new ArgumentException($"Unit {units} is not supported", nameof(units));
         }
+
+        public IUnit DefaultTargetUnit(IUnit value)
+        {
+            var converter = _converters.SingleOrDefault(x => x.IsConverterFor(value));
+            return converter?.DefaultTarget ?? throw new ArgumentException($"Unit {value.Units} is not supported", nameof(value));
+        }
     }
 }

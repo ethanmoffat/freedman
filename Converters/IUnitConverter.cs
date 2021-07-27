@@ -4,6 +4,8 @@ namespace freedman.Converters
 {
     public interface IUnitConverter
     {
+        IUnit DefaultTarget { get; }
+
         bool IsConverterFor(IUnit unit);
 
         IUnit ToSIUnit(IUnit source);

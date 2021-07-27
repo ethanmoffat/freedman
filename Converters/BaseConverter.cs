@@ -9,6 +9,8 @@ namespace freedman.Converters
     {
         private readonly Regex _matcher;
 
+        public abstract IUnit DefaultTarget { get; }
+
         protected abstract double Factor { get; }
 
         protected virtual double TotalOffset { get; } = 0;

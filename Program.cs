@@ -8,7 +8,6 @@ using Azure.Data.Tables;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using freedman.Converters;
-using freedman.Converters.Length;
 using freedman.Parser;
 using freedman.Unit;
 using Microsoft.Extensions.Configuration;
@@ -186,7 +185,6 @@ namespace freedman
             await e.Message.RespondAsync(message);
         }
 
-        // todo: return type is only Length right now, need to use correct types
         private static async Task<IUnit> Convert(IUnit unit, IUnit target)
         {
             var converters = _registry.ResolveAll<IUnitConverter>();
@@ -208,13 +206,13 @@ namespace freedman
                 case "gal":
                 case "gallon":
                 case "gallons":
-                    return new Length((quantity * 3.78541178), "liters");
+                    return new Volume((quantity * 3.78541178), "liters");
 
                 case "liter":
                 case "litre":
                 case "liters":
                 case "litres":
-                    return new Length((quantity / 3.78541178), "gallons");
+                    return new Volume((quantity / 3.78541178), "gallons");
 
                 case "usd":
                     {
@@ -230,7 +228,7 @@ namespace freedman
                                 _lastFetchUsdCad = DateTime.Now;
                             }
 
-                            return new Length(quantity * USD_CAD, "CAD");
+                            return new Currency(quantity * USD_CAD, "CAD");
                         }
                         catch (RequestFailedException)
                         {
@@ -256,7 +254,7 @@ namespace freedman
                                 _lastFetchCadUsd = DateTime.Now;
                             }
 
-                            return new Length(quantity * CAD_USD, "USD");
+                            return new Currency(quantity * CAD_USD, "USD");
                         }
                         catch (RequestFailedException)
                         {
@@ -273,17 +271,17 @@ namespace freedman
                 case "lb":
                 case "pound":
                 case "pounds":
-                    return new Length(quantity / 2.20462262, "kilograms");
+                    return new Weight(quantity / 2.20462262, "kilograms");
 
                 case "kg":
                 case "kilogram":
                 case "kilograms":
-                    return new Length(quantity * 2.20462262, "pounds");
+                    return new Weight(quantity * 2.20462262, "pounds");
 
                 case "washroom":
-                    return new Length(quantity, "bathroom");
+                    return new GenericUnit(quantity, "bathroom");
                 case "bathroom":
-                    return new Length(quantity, "washroom");
+                    return new GenericUnit(quantity, "washroom");
             }
 
             return null;

@@ -61,9 +61,13 @@ namespace freedman.Parser
                 target = messageParts[0];
                 if (messageParts.Length > 1 && IsValidSecondWordUnit(target, messageParts[1]))
                     target += $" {messageParts[1]}";
-            }
 
-            return (value, _unitFactory.UnitFromUnits(0, target));
+                return (value, _unitFactory.UnitFromUnits(0, target));
+            }
+            else
+            {
+                return (value, _unitFactory.DefaultTargetUnit(value));
+            }
         }
 
         private static bool IsValidSecondWordUnit(string firstPart, string secondPart)
