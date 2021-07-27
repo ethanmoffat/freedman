@@ -2,7 +2,7 @@
 {
     public class CentimeterConverter : LengthConverter
     {
-        protected override double Factor => 100.0;
+        protected override double Factor => 0.01;
 
         protected override string UnitRepresentation => "cm";
 

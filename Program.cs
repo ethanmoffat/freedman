@@ -9,6 +9,7 @@ using DSharpPlus;
 using DSharpPlus.EventArgs;
 using freedman.Converters;
 using freedman.Converters.Length;
+using freedman.Parser;
 using freedman.Unit;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -149,36 +150,23 @@ namespace freedman
                 }
             }
 
-            double quantity = 0;
-            var units = string.Empty;
-            if (!double.TryParse(messageParts[1], out quantity))
+            IUnit unit, target;
+            try
             {
-                var filtered = new string(messageParts[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
-                quantity = double.Parse(filtered);
-                units = messageParts[1].Substring(messageParts[1].IndexOf(filtered) + filtered.Length);
-                if (messageParts.Count > 2 && IsValidSecondWordUnit(units, messageParts[2]))
-                {
-                    units += " " + messageParts[2];
-                }
+                // todo: dependency injection
+                var parser = new UnitParser();
+                (unit, target) = parser.Parse(e.Message.Content);
             }
-            else
+            catch (ArgumentException ae)
             {
-                if (messageParts.Count <= 2)
-                    return;
-                units = messageParts[2];
-                if (messageParts.Count > 3 && IsValidSecondWordUnit(units, messageParts[3]))
-                {
-                    units += " " + messageParts[3];
-                }
+                await e.Message.RespondAsync("Error: " + ae.Message);
+                return;
             }
-
-            // todo: factory based on input units to determine unit typing - length, volume, temp, etc.
-            var unit = new Length(quantity, units);
 
             IUnit converted;
             try
             {
-                converted = await Convert(unit);
+                converted = await Convert(unit, target);
             }
             catch (RequestFailedException rfe)
             {
@@ -186,7 +174,7 @@ namespace freedman
                 return;
             }
 
-            var extra = quantity.ToString().Split(".")[0] == "69"
+            var extra = unit.Value.ToString().Split(".")[0] == "69"
                 ? " (nice)"
                 : string.Empty;
 
@@ -195,19 +183,23 @@ namespace freedman
                 : string.Empty;
 
             var message = converted == null
-                ? $"I don't know how to convert {units} into something"
-                : $"{quantity}{extra} {units} is {Math.Round(converted.Value, _precision[e.Guild.Id])}{extra2} {converted?.Units}";
+                ? $"I don't know how to convert {unit.Units} into {target.Units}"
+                : $"{unit.Value}{extra} {unit.Units} is {Math.Round(converted.Value, _precision[e.Guild.Id])}{extra2} {converted.Units}";
 
             await e.Message.RespondAsync(message);
         }
 
         // todo: return type is only Length right now, need to use correct types
-        private static async Task<IUnit> Convert(IUnit unit)
+        private static async Task<IUnit> Convert(IUnit unit, IUnit target)
         {
             var converter = _converters.SingleOrDefault(x => x.IsConverterFor(unit));
             if (converter != null)
             {
-                return converter.ToSIUnit(unit);
+                var targetConverter = _converters.SingleOrDefault(x => x.IsConverterFor(target));
+                if (targetConverter != null)
+                {
+                    return targetConverter.FromSIUnit(converter.ToSIUnit(unit));
+                }
             }
 
             var quantity = unit.Value;
@@ -308,29 +300,6 @@ namespace freedman
             }
 
             return null;
-        }
-
-        private static bool IsValidSecondWordUnit(string firstPart, string secondPart)
-        {
-            var secondPartLower = secondPart.ToLower();
-            switch (firstPart.ToLower())
-            {
-                case "degrees":
-                    return secondPartLower == "f" || secondPartLower == "c" || secondPartLower == "farenheit" || secondPartLower == "celsius";
-                case "fl":
-                case "fluid":
-                    return secondPartLower == "oz" || secondPartLower == "ozs" || secondPartLower == "ounce" || secondPartLower == "ounces";
-                case "light":
-                    return secondPartLower == "years";
-                case "astronomical":
-                    return secondPartLower == "units";
-                case "big":
-                    return secondPartLower == "mac" || secondPartLower == "macs";
-                case "football":
-                    return secondPartLower == "field" || secondPartLower == "fields";
-            }
-
-            return false;
         }
     }
 }

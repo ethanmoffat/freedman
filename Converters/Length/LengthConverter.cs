@@ -29,7 +29,7 @@ namespace freedman.Converters.Length
         {
             var converted = source switch
             {
-                Unit.Length length => length.Value * Factor,
+                Unit.Length length => length.Value / Factor,
                 _ => throw new ArgumentException($"source {source} is not a Length")
             };
 
@@ -43,7 +43,7 @@ namespace freedman.Converters.Length
         {
             var converted = source switch
             {
-                Unit.Length length => length.Value / Factor,
+                Unit.Length length => length.Value * Factor,
                 _ => throw new ArgumentException($"source {source} is not a Length")
             };
 

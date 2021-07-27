@@ -2,7 +2,7 @@
 {
     public class MicrometerConverter : LengthConverter
     {
-        protected override double Factor => 1000000.0;
+        protected override double Factor => 0.000001;
 
         protected override string UnitRepresentation => "μm";
 

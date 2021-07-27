@@ -3,7 +3,7 @@
     public class KilometerConverter : LengthConverter
     {
         // Meters * .001 = Kilometers
-        protected override double Factor => 0.001;
+        protected override double Factor => 1000.0;
 
         protected override string UnitRepresentation => "km";
 

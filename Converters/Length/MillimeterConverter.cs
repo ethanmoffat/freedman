@@ -2,7 +2,7 @@
 {
     public class MillimeterConverter : LengthConverter
     {
-        protected override double Factor => 1000.0;
+        protected override double Factor => 0.001;
 
         protected override string UnitRepresentation => "mm";
 

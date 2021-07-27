@@ -2,7 +2,7 @@
 {
     public class NanometerConverter : LengthConverter
     {
-        protected override double Factor => 1000000000.0;
+        protected override double Factor => 0.000000001;
 
         protected override string UnitRepresentation => "nm";
 

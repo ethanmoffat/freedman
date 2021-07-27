@@ -2,7 +2,7 @@
 {
     public class InchConverter : LengthConverter
     {
-        protected override double Factor => 1.0 / 39.3700787;
+        protected override double Factor => 0.0254;
 
         protected override string UnitRepresentation => "in";
 

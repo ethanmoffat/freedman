@@ -2,7 +2,7 @@
 {
     public class FootConverter : LengthConverter
     {
-        protected override double Factor => 1.0 / 3.2808399;
+        protected override double Factor => 1 / 3.2808398950131;
 
         protected override string UnitRepresentation => "ft";
 
