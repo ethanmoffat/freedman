@@ -1,9 +1,11 @@
-﻿using freedman.Unit;
+﻿using AutomaticTypeMapper;
+using freedman.Unit;
 using System;
 using System.Linq;
 
 namespace freedman.Parser
 {
+    [AutoMappedType]
     public class UnitParser : IUnitParser
     {
         public (IUnit Value, IUnit Target) Parse(string message)

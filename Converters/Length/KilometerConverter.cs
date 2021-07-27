@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class KilometerConverter : LengthConverter
     {
         // Meters * .001 = Kilometers

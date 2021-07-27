@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class BigMacConverter : LengthConverter
     {
         // 2.75in -> m

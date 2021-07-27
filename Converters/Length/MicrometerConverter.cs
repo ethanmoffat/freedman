@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class MicrometerConverter : LengthConverter
     {
         protected override double Factor => 0.000001;

@@ -21,5 +21,10 @@
         {
             return new Length(input.Value / scalar, input.Units);
         }
+
+        public override string ToString()
+        {
+            return $"{Value} {Units}";
+        }
     }
 }

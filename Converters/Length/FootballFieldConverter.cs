@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class FootballFieldConverter : LengthConverter
     {
         // 360ft -> m

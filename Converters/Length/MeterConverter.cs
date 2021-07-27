@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class MeterConverter : LengthConverter
     {
         protected override double Factor => 1.0;

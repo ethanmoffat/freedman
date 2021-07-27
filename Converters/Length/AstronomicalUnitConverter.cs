@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class AstronomicalUnitConverter : LengthConverter
     {
         protected override double Factor => 149597870700.0;

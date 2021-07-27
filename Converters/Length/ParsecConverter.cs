@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class ParsecConverter : LengthConverter
     {
         // https://en.wikipedia.org/wiki/Parsec#Calculating_the_value_of_a_parsec

@@ -1,5 +1,8 @@
-﻿namespace freedman.Converters.Length
+﻿using AutomaticTypeMapper;
+
+namespace freedman.Converters.Length
 {
+    [AutoMappedType]
     public class LightYearConverter : LengthConverter
     {
         protected override double Factor => 9460730472580800.0;

@@ -13,6 +13,8 @@ using freedman.Parser;
 using freedman.Unit;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using AutomaticTypeMapper;
+using System.Reflection;
 
 namespace freedman
 {
@@ -32,17 +34,14 @@ namespace freedman
 
         private static IDictionary<ulong, int> _precision;
 
-        // todo: dependency injection
-        private static readonly IUnitConverter[] _converters = new IUnitConverter[]
-        {
-            new AstronomicalUnitConverter(), new BigMacConverter(), new CentimeterConverter(),
-            new FootballFieldConverter(), new FootConverter(), new InchConverter(), new KilometerConverter(),
-            new LightYearConverter(), new MeterConverter(), new MicrometerConverter(), new MileConverter(),
-            new MillimeterConverter(), new NanometerConverter(), new ParsecConverter(), new YardConverter()
-        };
+        // todo: move stuff out of main and use proper injection
+        private static ITypeRegistry _registry;
 
         public static async Task Main(string[] args)
         {
+            _registry = new UnityRegistry(Assembly.GetExecutingAssembly().FullName);
+            _registry.RegisterDiscoveredTypes();
+
             var builder = new ConfigurationBuilder();
             builder.AddAzureAppConfiguration(Environment.GetEnvironmentVariable("ConnectionString"));
             _config = builder.Build();
@@ -72,9 +71,10 @@ namespace freedman
             }
             finally
             {
-                _httpClient.Dispose();
+                _httpClient?.Dispose();
                 await discordClient?.DisconnectAsync();
                 discordClient?.Dispose();
+                _registry?.Dispose();
             }
         }
 
@@ -97,8 +97,6 @@ namespace freedman
                     return;
                 }
 
-                // todo: connect to cosmos and store precision for a given server
-                // todo: cache precision values per server instead of fetching them every time
                 PrecisionTableRecord precisionRecord;
                 try
                 {
@@ -153,8 +151,7 @@ namespace freedman
             IUnit unit, target;
             try
             {
-                // todo: dependency injection
-                var parser = new UnitParser();
+                var parser = _registry.Resolve<IUnitParser>();
                 (unit, target) = parser.Parse(e.Message.Content);
             }
             catch (ArgumentException ae)
@@ -192,10 +189,12 @@ namespace freedman
         // todo: return type is only Length right now, need to use correct types
         private static async Task<IUnit> Convert(IUnit unit, IUnit target)
         {
-            var converter = _converters.SingleOrDefault(x => x.IsConverterFor(unit));
+            var converters = _registry.ResolveAll<IUnitConverter>();
+
+            var converter = converters.SingleOrDefault(x => x.IsConverterFor(unit));
             if (converter != null)
             {
-                var targetConverter = _converters.SingleOrDefault(x => x.IsConverterFor(target));
+                var targetConverter = converters.SingleOrDefault(x => x.IsConverterFor(target));
                 if (targetConverter != null)
                 {
                     return targetConverter.FromSIUnit(converter.ToSIUnit(unit));
