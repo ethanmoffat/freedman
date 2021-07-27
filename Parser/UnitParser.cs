@@ -8,6 +8,13 @@ namespace freedman.Parser
     [AutoMappedType]
     public class UnitParser : IUnitParser
     {
+        private readonly IUnitFactory _unitFactory;
+
+        public UnitParser(IUnitFactory unitFactory)
+        {
+            _unitFactory = unitFactory;
+        }
+
         public (IUnit Value, IUnit Target) Parse(string message)
         {
             var messageParts = message.Split(" ");
@@ -42,8 +49,7 @@ namespace freedman.Parser
                 }
             }
 
-            // todo: factory based on input units to determine unit typing - length, volume, temp, etc.
-            var value = new Length(quantity, units);
+            var value = _unitFactory.UnitFromUnits(quantity, units);
 
             var target = string.Empty;
             if (messageParts.Any(x => string.Equals(x, "to", StringComparison.OrdinalIgnoreCase)))
@@ -57,17 +63,17 @@ namespace freedman.Parser
                     target += $" {messageParts[1]}";
             }
 
-            return (value, new Length(0, target == string.Empty ? "m" : target));
+            return (value, _unitFactory.UnitFromUnits(0, target));
         }
 
-        // todo: put this logic in the converters themselves
         private static bool IsValidSecondWordUnit(string firstPart, string secondPart)
         {
             var secondPartLower = secondPart.ToLower();
             switch (firstPart.ToLower())
             {
                 case "degrees":
-                    return secondPartLower == "f" || secondPartLower == "c" || secondPartLower == "farenheit" || secondPartLower == "celsius";
+                    return secondPartLower == "f" || secondPartLower == "c" || secondPartLower == "k"
+                        || secondPartLower == "farenheit" || secondPartLower == "celsius" || secondPartLower == "kelvin";
                 case "fl":
                 case "fluid":
                     return secondPartLower == "oz" || secondPartLower == "ozs" || secondPartLower == "ounce" || secondPartLower == "ounces";

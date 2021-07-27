@@ -205,18 +205,6 @@ namespace freedman
             // machine learning is just if statements
             switch (unit.Units.ToLowerInvariant())
             {
-                case "c":
-                case "celsius":
-                case "degrees c":
-                case "degrees celsius":
-                    return new Length(quantity * 1.8 + 32.0, "farenheit");
-
-                case "f":
-                case "farenheit":
-                case "degrees f":
-                case "degrees farenheit":
-                    return new Length((quantity - 32.0) / 1.8, "celsius");
-
                 case "gal":
                 case "gallon":
                 case "gallons":

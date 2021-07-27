@@ -9,5 +9,7 @@ namespace freedman.Converters
         IUnit ToSIUnit(IUnit source);
 
         IUnit FromSIUnit(IUnit source);
+
+        IUnit UnitFactory(double value, string units);
     }
 }

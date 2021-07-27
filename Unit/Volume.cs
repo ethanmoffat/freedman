@@ -1,8 +1,8 @@
 ﻿namespace freedman.Unit
 {
-    public class Length : GenericUnit
+    public class Volume : GenericUnit
     {
-        public Length(double value, string units)
+        public Volume(double value, string units)
             : base(value, units)
         {
         }

@@ -1,8 +1,8 @@
 ﻿namespace freedman.Unit
 {
-    public class Length : GenericUnit
+    public class Currency : GenericUnit
     {
-        public Length(double value, string units)
+        public Currency(double value, string units)
             : base(value, units)
         {
         }
