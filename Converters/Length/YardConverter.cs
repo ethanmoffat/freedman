@@ -13,7 +13,7 @@ namespace freedman.Converters.Length
         protected override string UnitRepresentation => "yd";
 
         public YardConverter()
-            : base("^(yd|yards?)$")
+            : base("^(yd|yard)s?$")
         {
         }
     }

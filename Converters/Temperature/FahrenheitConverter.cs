@@ -17,7 +17,7 @@ namespace freedman.Converters.Temperature
         protected override string UnitRepresentation => "f";
 
         public FahrenheitConverter()
-            : base("(degrees)?(f|farenheit)")
+            : base("^(degrees)?(f|farenheit)$")
         {
         }
     }
