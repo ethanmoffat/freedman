@@ -7,6 +7,9 @@ using Azure;
 using Azure.Data.Tables;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
+using freedman.Converters;
+using freedman.Converters.Length;
+using freedman.Unit;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
@@ -27,6 +30,15 @@ namespace freedman
         private static TableClient _tableClient;
 
         private static IDictionary<ulong, int> _precision;
+
+        // todo: dependency injection
+        private static readonly IUnitConverter[] _converters = new IUnitConverter[]
+        {
+            new AstronomicalUnitConverter(), new BigMacConverter(), new CentimeterConverter(),
+            new FootballFieldConverter(), new FootConverter(), new InchConverter(), new KilometerConverter(),
+            new LightYearConverter(), new MeterConverter(), new MicrometerConverter(), new MileConverter(),
+            new MillimeterConverter(), new NanometerConverter(), new ParsecConverter(), new YardConverter()
+        };
 
         public static async Task Main(string[] args)
         {
@@ -138,32 +150,35 @@ namespace freedman
             }
 
             double quantity = 0;
-            var unit = string.Empty;
+            var units = string.Empty;
             if (!double.TryParse(messageParts[1], out quantity))
             {
                 var filtered = new string(messageParts[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
                 quantity = double.Parse(filtered);
-                unit = messageParts[1].Substring(messageParts[1].IndexOf(filtered) + filtered.Length);
-                if (messageParts.Count > 2 && IsValidSecondWordUnit(unit, messageParts[2]))
+                units = messageParts[1].Substring(messageParts[1].IndexOf(filtered) + filtered.Length);
+                if (messageParts.Count > 2 && IsValidSecondWordUnit(units, messageParts[2]))
                 {
-                    unit += " " + messageParts[2];
+                    units += " " + messageParts[2];
                 }
             }
             else
             {
                 if (messageParts.Count <= 2)
                     return;
-                unit = messageParts[2];
-                if (messageParts.Count > 3 && IsValidSecondWordUnit(unit, messageParts[3]))
+                units = messageParts[2];
+                if (messageParts.Count > 3 && IsValidSecondWordUnit(units, messageParts[3]))
                 {
-                    unit += " " + messageParts[3];
+                    units += " " + messageParts[3];
                 }
             }
 
-            (double Quantity, string Unit)? converted;
+            // todo: factory based on input units to determine unit typing - length, volume, temp, etc.
+            var unit = new Length(quantity, units);
+
+            IUnit converted;
             try
             {
-                converted = await Convert(quantity, unit);
+                converted = await Convert(unit);
             }
             catch (RequestFailedException rfe)
             {
@@ -175,44 +190,52 @@ namespace freedman
                 ? " (nice)"
                 : string.Empty;
 
-            var extra2 = converted?.Quantity.ToString().Split(".")[0] == "69"
+            var extra2 = converted?.Value.ToString().Split(".")[0] == "69"
                 ? " (nice)"
                 : string.Empty;
 
             var message = converted == null
-                ? $"I don't know how to convert {unit} into something"
-                : $"{quantity}{extra} {unit} is {Math.Round(converted.Value.Quantity, _precision[e.Guild.Id])}{extra2} {converted?.Unit}";
+                ? $"I don't know how to convert {units} into something"
+                : $"{quantity}{extra} {units} is {Math.Round(converted.Value, _precision[e.Guild.Id])}{extra2} {converted?.Units}";
 
             await e.Message.RespondAsync(message);
         }
 
-        private static async Task<(double Quantity, string Unit)?> Convert(double quantity, string unit)
+        // todo: return type is only Length right now, need to use correct types
+        private static async Task<IUnit> Convert(IUnit unit)
         {
+            var converter = _converters.SingleOrDefault(x => x.IsConverterFor(unit));
+            if (converter != null)
+            {
+                return converter.ToSIUnit(unit);
+            }
+
+            var quantity = unit.Value;
             // machine learning is just if statements
-            switch (unit.ToLowerInvariant())
+            switch (unit.Units.ToLowerInvariant())
             {
                 case "c":
                 case "celsius":
                 case "degrees c":
                 case "degrees celsius":
-                    return (quantity * 1.8 + 32.0, "farenheit");
+                    return new Length(quantity * 1.8 + 32.0, "farenheit");
 
                 case "f":
                 case "farenheit":
                 case "degrees f":
                 case "degrees farenheit":
-                    return ((quantity - 32.0) / 1.8, "celsius");
+                    return new Length((quantity - 32.0) / 1.8, "celsius");
 
                 case "gal":
                 case "gallon":
                 case "gallons":
-                    return ((quantity * 3.78541178), "liters");
+                    return new Length((quantity * 3.78541178), "liters");
 
                 case "liter":
                 case "litre":
                 case "liters":
                 case "litres":
-                    return ((quantity / 3.78541178), "gallons");
+                    return new Length((quantity / 3.78541178), "gallons");
 
                 case "usd":
                     {
@@ -228,7 +251,7 @@ namespace freedman
                                 _lastFetchUsdCad = DateTime.Now;
                             }
 
-                            return (quantity * USD_CAD, "CAD");
+                            return new Length(quantity * USD_CAD, "CAD");
                         }
                         catch (RequestFailedException)
                         {
@@ -254,7 +277,7 @@ namespace freedman
                                 _lastFetchCadUsd = DateTime.Now;
                             }
 
-                            return (quantity * CAD_USD, "USD");
+                            return new Length(quantity * CAD_USD, "USD");
                         }
                         catch (RequestFailedException)
                         {
@@ -266,73 +289,22 @@ namespace freedman
                         }
                     }
 
-                case "km":
-                case "kilometer":
-                case "kilometers":
-                case "kilmetre":
-                case "kilmetres":
-                    return (quantity / 1.609344, "miles");
-
-                case "mi":
-                case "miles":
-                case "mile":
-                    return (quantity * 1.609344, "kilometers");
-
-                case "m":
-                case "meter":
-                case "meters":
-                case "metres":
-                case "metre":
-                    return (quantity * 3.2808399, "feet");
-
-                case "ft":
-                case "foot":
-                case "feet":
-                    return (quantity / 3.2808399, "meters");
-
-                case "cm":
-                case "centimeter":
-                case "centimeters":
-                    return (quantity / 2.54, "inches");
-
-                case "in":
-                case "inches":
-                case "inch":
-                    return (quantity * 2.54, "centimeters");
-
                 case "#":
                 case "lbs":
                 case "lb":
                 case "pound":
                 case "pounds":
-                    return (quantity / 2.20462262, "kilograms");
+                    return new Length(quantity / 2.20462262, "kilograms");
 
                 case "kg":
                 case "kilogram":
                 case "kilograms":
-                    return (quantity * 2.20462262, "pounds");
+                    return new Length(quantity * 2.20462262, "pounds");
 
                 case "washroom":
-                    return (quantity, "bathroom");
+                    return new Length(quantity, "bathroom");
                 case "bathroom":
-                    return (quantity, "washroom");
-
-                case "ly":
-                case "light years":
-                case "lightyears":
-                    return (quantity * 63241.0771, "AU");
-
-                case "au":
-                case "astronomical units":
-                    return (quantity / 63241.0771, "light years");
-
-                case "football field":
-                case "football fields":
-                    return (quantity * 1570.90909090, "big macs");
-
-                case "big mac":
-                case "big macs":
-                    return (quantity / 1570.90909090, "football fields");
+                    return new Length(quantity, "washroom");
             }
 
             return null;
