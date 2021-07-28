@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
@@ -10,24 +9,14 @@ using DSharpPlus.EventArgs;
 using freedman.Converters;
 using freedman.Parser;
 using freedman.Unit;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using AutomaticTypeMapper;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace freedman
 {
     public class Program
     {
-        private static readonly string CurrencyConvertUrl = "https://free.currconv.com/api/v7/convert?q={0}&compact=ultra&apiKey={1}";
-        private static HttpClient _httpClient;
-
-        private static double USD_CAD = 0.0;
-        private static DateTime _lastFetchUsdCad;
-
-        private static double CAD_USD = 0.0;
-        private static DateTime _lastFetchCadUsd;
-
         private static IConfigurationRoot _config;
         private static TableClient _tableClient;
 
@@ -41,14 +30,7 @@ namespace freedman
             _registry = new UnityRegistry(Assembly.GetExecutingAssembly().FullName);
             _registry.RegisterDiscoveredTypes();
 
-            var builder = new ConfigurationBuilder();
-            builder.AddAzureAppConfiguration(Environment.GetEnvironmentVariable("ConnectionString"));
-            _config = builder.Build();
-
-            _httpClient = new HttpClient();
-
-            _lastFetchUsdCad = DateTime.Now;
-            _lastFetchCadUsd = DateTime.Now;
+            _config = _registry.Resolve<Configuration.IConfigurationProvider>().Configuration;
 
             _precision = new Dictionary<ulong, int>();
 
@@ -70,7 +52,6 @@ namespace freedman
             }
             finally
             {
-                _httpClient?.Dispose();
                 await discordClient?.DisconnectAsync();
                 discordClient?.Dispose();
                 _registry?.Dispose();
@@ -162,11 +143,16 @@ namespace freedman
             IUnit converted;
             try
             {
-                converted = await Convert(unit, target);
+                converted = Convert(unit, target);
             }
-            catch (RequestFailedException rfe)
+            catch (Exception ex) when (ex is RequestFailedException || ex is ArgumentException)
             {
-                await e.Message.RespondAsync(rfe.Message);
+                await e.Message.RespondAsync("Error: " + ex.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                await e.Message.RespondAsync("Unspecified error occurred: " + ex.Message);
                 return;
             }
 
@@ -185,7 +171,7 @@ namespace freedman
             await e.Message.RespondAsync(message);
         }
 
-        private static async Task<IUnit> Convert(IUnit unit, IUnit target)
+        private static IUnit Convert(IUnit unit, IUnit target)
         {
             var converters = _registry.ResolveAll<IUnitConverter>();
 
@@ -197,80 +183,6 @@ namespace freedman
                 {
                     return targetConverter.FromSIUnit(converter.ToSIUnit(unit));
                 }
-            }
-
-            var quantity = unit.Value;
-            // machine learning is just if statements
-            switch (unit.Units.ToLowerInvariant())
-            {
-                case "usd":
-                    {
-                        try
-                        {
-                            if ((DateTime.Now - _lastFetchUsdCad).TotalHours > 1 || USD_CAD == 0.0)
-                            {
-                                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "USD_CAD", _config["currency-api-key"]));
-                                if (!response.IsSuccessStatusCode)
-                                    throw new RequestFailedException($"Unable to contact currency conversion API (code {response.StatusCode})\nService status: https://www.currencyconverterapi.com/server-status");
-                                var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { USD_CAD = 0.0 });
-                                USD_CAD = json.USD_CAD;
-                                _lastFetchUsdCad = DateTime.Now;
-                            }
-
-                            return new Currency(quantity * USD_CAD, "CAD");
-                        }
-                        catch (RequestFailedException)
-                        {
-                            throw;
-                        }
-                        catch
-                        {
-                            break;
-                        }
-                    }
-
-                case "cad":
-                    {
-                        try
-                        {
-                            if ((DateTime.Now - _lastFetchCadUsd).TotalHours > 1 || CAD_USD == 0.0)
-                            {
-                                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, "CAD_USD", _config["currency-api-key"]));
-                                if (!response.IsSuccessStatusCode)
-                                    throw new RequestFailedException($"Unable to contact currency conversion API (code {response.StatusCode})\nService status: https://www.currencyconverterapi.com/server-status");
-                                var json = JsonConvert.DeserializeAnonymousType(await response.Content.ReadAsStringAsync(), new { CAD_USD = 0.0 });
-                                CAD_USD = json.CAD_USD;
-                                _lastFetchCadUsd = DateTime.Now;
-                            }
-
-                            return new Currency(quantity * CAD_USD, "USD");
-                        }
-                        catch (RequestFailedException)
-                        {
-                            throw;
-                        }
-                        catch
-                        {
-                            break;
-                        }
-                    }
-
-                case "#":
-                case "lbs":
-                case "lb":
-                case "pound":
-                case "pounds":
-                    return new Weight(quantity / 2.20462262, "kilograms");
-
-                case "kg":
-                case "kilogram":
-                case "kilograms":
-                    return new Weight(quantity * 2.20462262, "pounds");
-
-                case "washroom":
-                    return new GenericUnit(quantity, "bathroom");
-                case "bathroom":
-                    return new GenericUnit(quantity, "washroom");
             }
 
             return null;
