@@ -203,17 +203,6 @@ namespace freedman
             // machine learning is just if statements
             switch (unit.Units.ToLowerInvariant())
             {
-                case "gal":
-                case "gallon":
-                case "gallons":
-                    return new Volume((quantity * 3.78541178), "liters");
-
-                case "liter":
-                case "litre":
-                case "liters":
-                case "litres":
-                    return new Volume((quantity / 3.78541178), "gallons");
-
                 case "usd":
                     {
                         try
