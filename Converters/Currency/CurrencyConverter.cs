@@ -1,7 +1,6 @@
 ﻿using Azure;
 using freedman.Configuration;
 using freedman.Unit;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -42,21 +41,20 @@ namespace freedman.Converters.Currency
         public bool IsConverterFor(IUnit unit)
             => _matcher.IsMatch(unit.Units);
 
-        public IUnit FromSIUnit(IUnit source)
+        public async Task<IUnit> FromSIUnitAsync(IUnit source)
         {
             if (Currency == "USD")
                 return source;
 
-            // todo: convert everything to async
-            return ConvertCurrency(source.Value, "USD", Currency).GetAwaiter().GetResult();
+            return await ConvertCurrency(source.Value, "USD", Currency);
         }
 
-        public IUnit ToSIUnit(IUnit source)
+        public async Task<IUnit> ToSIUnitAsync(IUnit source)
         {
             if (Currency == "USD")
                 return source;
 
-            return ConvertCurrency(source.Value, source.Units, "USD").GetAwaiter().GetResult();
+            return await ConvertCurrency(source.Value, source.Units, "USD");
         }
 
         public IUnit UnitFactory(double value, string units)

@@ -1,6 +1,7 @@
 ﻿using freedman.Unit;
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace freedman.Converters
 {
@@ -31,7 +32,7 @@ namespace freedman.Converters
             return _matcher.IsMatch(unit.Units);
         }
 
-        public virtual IUnit FromSIUnit(IUnit source)
+        public virtual Task<IUnit> FromSIUnitAsync(IUnit source)
         {
             var converted = source switch
             {
@@ -39,10 +40,10 @@ namespace freedman.Converters
                 _ => throw new ArgumentException($"source {source} is not a {typeof(T).Name}")
             };
 
-            return UnitFactory(converted, UnitRepresentation);
+            return Task.FromResult(UnitFactory(converted, UnitRepresentation));
         }
 
-        public virtual IUnit ToSIUnit(IUnit source)
+        public virtual Task<IUnit> ToSIUnitAsync(IUnit source)
         {
             var converted = source switch
             {
@@ -50,7 +51,7 @@ namespace freedman.Converters
                 _ => throw new ArgumentException($"source {source} is not a {typeof(T).Name}")
             };
 
-            return UnitFactory(converted, SIRepresentation);
+            return Task.FromResult(UnitFactory(converted, SIRepresentation));
         }
 
         public abstract IUnit UnitFactory(double value, string units);

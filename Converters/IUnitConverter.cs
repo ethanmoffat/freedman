@@ -1,4 +1,5 @@
 ﻿using freedman.Unit;
+using System.Threading.Tasks;
 
 namespace freedman.Converters
 {
@@ -8,9 +9,9 @@ namespace freedman.Converters
 
         bool IsConverterFor(IUnit unit);
 
-        IUnit ToSIUnit(IUnit source);
+        Task<IUnit> ToSIUnitAsync(IUnit source);
 
-        IUnit FromSIUnit(IUnit source);
+        Task<IUnit> FromSIUnitAsync(IUnit source);
 
         IUnit UnitFactory(double value, string units);
     }

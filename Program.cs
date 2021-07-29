@@ -138,7 +138,7 @@ namespace freedman
             IUnit converted;
             try
             {
-                converted = Convert(unit, target);
+                converted = await Convert(unit, target);
             }
             catch (Exception ex) when (ex is RequestFailedException || ex is ArgumentException)
             {
@@ -166,7 +166,7 @@ namespace freedman
             await e.Message.RespondAsync(message);
         }
 
-        private static IUnit Convert(IUnit unit, IUnit target)
+        private static async Task<IUnit> Convert(IUnit unit, IUnit target)
         {
             var converters = _registry.ResolveAll<IUnitConverter>();
 
@@ -176,7 +176,7 @@ namespace freedman
                 var targetConverter = converters.SingleOrDefault(x => x.IsConverterFor(target));
                 if (targetConverter != null)
                 {
-                    return targetConverter.FromSIUnit(converter.ToSIUnit(unit));
+                    return await targetConverter.FromSIUnitAsync(await converter.ToSIUnitAsync(unit));
                 }
             }
 
