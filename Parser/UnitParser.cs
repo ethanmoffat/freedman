@@ -15,52 +15,49 @@ namespace freedman.Parser
             _unitFactory = unitFactory;
         }
 
-        public (IUnit Value, IUnit Target) Parse(string message)
+        public (IUnit Value, IUnit Target) Parse(string[] splitMessage)
         {
-            var messageParts = message.Split(" ");
-
-            double quantity = 0;
+            var quantity = 0.0;
             var units = string.Empty;
-            if (!double.TryParse(messageParts[1], out quantity))
+            if (!double.TryParse(splitMessage[1], out quantity))
             {
-                var filtered = new string(messageParts[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
+                var filtered = new string(splitMessage[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
                 if (!double.TryParse(filtered, out quantity))
                 {
                     quantity = 1;
                 }
 
-                units = messageParts[1].Substring(messageParts[1].IndexOf(filtered) + filtered.Length);
-                if (messageParts.Length > 2 && IsValidSecondWordUnit(units, messageParts[2]))
+                units = splitMessage[1].Substring(splitMessage[1].IndexOf(filtered) + filtered.Length);
+                if (splitMessage.Length > 2 && IsValidSecondWordUnit(units, splitMessage[2]))
                 {
-                    units += " " + messageParts[2];
+                    units += " " + splitMessage[2];
                 }
+            }
+            else if (splitMessage.Length <= 2)
+            {
+                throw new ArgumentException("Quantity and unit are required");
             }
             else
             {
-                if (messageParts.Length <= 2)
+                units = splitMessage[2];
+                if (splitMessage.Length > 3 && IsValidSecondWordUnit(units, splitMessage[3]))
                 {
-                    throw new ArgumentException("Quantity and unit are required");
-                }
-
-                units = messageParts[2];
-                if (messageParts.Length > 3 && IsValidSecondWordUnit(units, messageParts[3]))
-                {
-                    units += " " + messageParts[3];
+                    units += " " + splitMessage[3];
                 }
             }
 
             var value = _unitFactory.UnitFromUnits(quantity, units);
 
             var target = string.Empty;
-            if (messageParts.Any(x => string.Equals(x, "to", StringComparison.OrdinalIgnoreCase)))
+            if (splitMessage.Any(x => string.Equals(x, "to", StringComparison.OrdinalIgnoreCase)))
             {
-                messageParts = messageParts.SkipWhile(x => !string.Equals(x, "to", StringComparison.OrdinalIgnoreCase)).Skip(1).ToArray();
-                if (!messageParts.Any())
+                splitMessage = splitMessage.SkipWhile(x => !string.Equals(x, "to", StringComparison.OrdinalIgnoreCase)).Skip(1).ToArray();
+                if (!splitMessage.Any())
                     throw new ArgumentException("Target unit must be specified");
 
-                target = messageParts[0];
-                if (messageParts.Length > 1 && IsValidSecondWordUnit(target, messageParts[1]))
-                    target += $" {messageParts[1]}";
+                target = splitMessage[0];
+                if (splitMessage.Length > 1 && IsValidSecondWordUnit(target, splitMessage[1]))
+                    target += $" {splitMessage[1]}";
 
                 return (value, _unitFactory.UnitFromUnits(0, target));
             }

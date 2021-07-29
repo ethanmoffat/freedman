@@ -4,6 +4,6 @@ namespace freedman.Parser
 {
     public interface IUnitParser
     {
-        (IUnit Value, IUnit Target) Parse(string message);
+        (IUnit Value, IUnit Target) Parse(string[] splitMessage);
     }
 }

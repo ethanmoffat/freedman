@@ -63,12 +63,11 @@ namespace freedman
             if (e.Author.IsBot)
                 return;
 
-            List<string> messageParts;
+            var messageParts = e.Message.Content.Split(new[] { " ", "\t", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            if (e.Message.Content.StartsWith("!precision ", StringComparison.OrdinalIgnoreCase))
+            if (messageParts[0].Equals("!precision", StringComparison.OrdinalIgnoreCase))
             {
-                messageParts = e.Message.Content.Split(" ").ToList();
-                if (messageParts.Count <= 1)
+                if (messageParts.Length <= 1)
                     return;
 
                 if (!int.TryParse(messageParts[1], out var precision) || precision < 0 || precision > 10)
@@ -102,16 +101,12 @@ namespace freedman
                 await e.Message.RespondAsync($"Precision for {e.Guild.Name} set to {precision}");
                 return;
             }
-            else if (e.Message.Content.Equals("!help", StringComparison.OrdinalIgnoreCase))
+            else if (messageParts[0].Equals("!help", StringComparison.OrdinalIgnoreCase))
             {
-                await e.Message.RespondAsync("Use `!convert {value} {units}` to convert units or `!precision {value}` to set precision of values");
+                await e.Message.RespondAsync("Use `!convert {value} {units} [to {units}]` to convert units or `!precision {value}` to set precision of values");
                 return;
             }
-            else if (!e.Message.Content.StartsWith("!convert ", StringComparison.OrdinalIgnoreCase))
-                return;
-
-            messageParts = e.Message.Content.Split(" ").ToList();
-            if (messageParts.Count <= 1)
+            else if (!messageParts[0].Equals("!convert", StringComparison.OrdinalIgnoreCase) || messageParts.Length <= 1)
                 return;
 
             if (!_precision.ContainsKey(e.Guild.Id))
@@ -132,7 +127,7 @@ namespace freedman
             try
             {
                 var parser = _registry.Resolve<IUnitParser>();
-                (unit, target) = parser.Parse(e.Message.Content);
+                (unit, target) = parser.Parse(messageParts);
             }
             catch (ArgumentException ae)
             {
