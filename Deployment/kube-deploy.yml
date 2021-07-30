@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: freedman-deploy
+  labels:
+    app: freedman
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: freedman
+  template:
+    metadata:
+      labels:
+        app: freedman
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: freedman
+        image: darthchungis/freedman:latest
+        imagePullPolicy: Always
+        env:
+          - name: ConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: freedman-appconf-connection-string
+                key: ConnectionString
