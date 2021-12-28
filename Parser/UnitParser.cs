@@ -22,6 +22,11 @@ namespace freedman.Parser
             if (!double.TryParse(splitMessage[1], out quantity))
             {
                 var filtered = new string(splitMessage[1].Where(c => char.IsDigit(c) || c == '.').ToArray());
+                if (splitMessage[1].StartsWith('-'))
+                {
+                    filtered = $"-{filtered}";
+                }
+
                 if (!double.TryParse(filtered, out quantity))
                 {
                     quantity = 1;
