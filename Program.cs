@@ -64,6 +64,10 @@ namespace freedman
                 return;
 
             var messageParts = e.Message.Content.Split(new[] { " ", "\t", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var commandStartIndex = messageParts.Select((part, ndx) => WordIsCommandStart(part) ? ndx : -1)
+                .Where(x => x != -1)
+                .FirstOrDefault();
+            messageParts = messageParts.Skip(commandStartIndex).ToArray();
 
             if (messageParts[0].Equals("!precision", StringComparison.OrdinalIgnoreCase))
             {
@@ -164,6 +168,13 @@ namespace freedman
                 : $"{unit.Value}{extra} {unit.Units} is {Math.Round(converted.Value, _precision[e.Guild.Id])}{extra2} {converted.Units}";
 
             await e.Message.RespondAsync(message);
+        }
+
+        private static bool WordIsCommandStart(string word)
+        {
+            return string.Equals("!precision", word, StringComparison.OrdinalIgnoreCase)
+                || string.Equals("!convert", word, StringComparison.OrdinalIgnoreCase)
+                || string.Equals("!help", word, StringComparison.OrdinalIgnoreCase);
         }
 
         private static async Task<IUnit> Convert(IUnit unit, IUnit target)
