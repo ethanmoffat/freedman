@@ -20,8 +20,8 @@ spec:
         image: darthchungis/freedman:latest
         imagePullPolicy: Always
         env:
-          - name: ConnectionString
+          - name: FreedmanConnectionString
             valueFrom:
               secretKeyRef:
                 name: freedman-appconf-connection-string
-                key: ConnectionString
+                key: FreedmanConnectionString
