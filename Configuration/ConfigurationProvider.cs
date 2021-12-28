@@ -12,7 +12,7 @@ namespace freedman.Configuration
         public ConfigurationProvider()
         {
             var builder = new ConfigurationBuilder();
-            builder.AddAzureAppConfiguration(Environment.GetEnvironmentVariable("ConnectionString"));
+            builder.AddAzureAppConfiguration(Environment.GetEnvironmentVariable("FreedmanConnectionString", EnvironmentVariableTarget.User) ?? Environment.GetEnvironmentVariable("FreedmanConnectionString"));
             Configuration = builder.Build();
         }
     }
