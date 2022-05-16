@@ -4,7 +4,7 @@ using System;
 
 namespace freedman.Configuration
 {
-    [AutoMappedType]
+    [AutoMappedType(IsSingleton = true)]
     public class ConfigurationProvider : IConfigurationProvider
     {
         public IConfigurationRoot Configuration { get; }

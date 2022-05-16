@@ -1,28 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using AutomaticTypeMapper;
 using Azure;
 using Azure.Data.Tables;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using freedman.Converters;
 using freedman.Parser;
+using freedman.Precision;
 using freedman.Unit;
-using AutomaticTypeMapper;
+using System;
+using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 
 namespace freedman
 {
     public class Program
     {
-        private static IConfigurationRoot _config;
-        private static TableClient _tableClient;
-
-        private static IDictionary<ulong, int> _precision;
-
-        // todo: move stuff out of main and use proper injection
         private static ITypeRegistry _registry;
 
         public static async Task Main(string[] args)
@@ -30,18 +23,14 @@ namespace freedman
             _registry = new UnityRegistry(Assembly.GetExecutingAssembly().FullName);
             _registry.RegisterDiscoveredTypes();
 
-            _config = _registry.Resolve<Configuration.IConfigurationProvider>().Configuration;
-
-            _precision = new Dictionary<ulong, int>();
+            var config = _registry.Resolve<Configuration.IConfigurationProvider>().Configuration;
 
             DiscordClient discordClient = null;
             try
             {
-                _tableClient = new TableClient(_config["freedman-storage"], "freedmanprecision");
-
                 discordClient = new DiscordClient(new DiscordConfiguration
                 {
-                    Token = _config["freeman-token"],
+                    Token = config["freeman-token"],
                     TokenType = TokenType.Bot
                 });
 
@@ -63,6 +52,9 @@ namespace freedman
             if (e.Author.IsBot)
                 return;
 
+            var tableClient = _registry.Resolve<IPrecisionTableProvider>().TableClient;
+            var precisionCache = _registry.Resolve<IPrecisionCacheRepository>().PrecisionCache;
+
             var messageParts = e.Message.Content.Split(new[] { " ", "\t", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var commandStartIndex = messageParts.Select((part, ndx) => WordIsCommandStart(part) ? ndx : -1)
                 .Where(x => x != -1)
@@ -83,9 +75,9 @@ namespace freedman
                 PrecisionTableRecord precisionRecord;
                 try
                 {
-                    precisionRecord = await _tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
+                    precisionRecord = await tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
                     precisionRecord.Precision = precision;
-                    await _tableClient.UpdateEntityAsync(precisionRecord, ETag.All, TableUpdateMode.Replace);
+                    await tableClient.UpdateEntityAsync(precisionRecord, ETag.All, TableUpdateMode.Replace);
                 }
                 catch (RequestFailedException)
                 {
@@ -97,10 +89,10 @@ namespace freedman
                         Timestamp = DateTime.Now,
                         Precision = precision
                     };
-                    await _tableClient.AddEntityAsync(precisionRecord);
+                    await tableClient.AddEntityAsync(precisionRecord);
                 }
 
-                _precision[e.Guild.Id] = precision;
+                precisionCache[e.Guild.Id] = precision;
 
                 await e.Message.RespondAsync($"Precision for {e.Guild.Name} set to {precision}");
                 return;
@@ -113,17 +105,17 @@ namespace freedman
             else if (!messageParts[0].Equals("!convert", StringComparison.OrdinalIgnoreCase) || messageParts.Length <= 1)
                 return;
 
-            if (!_precision.ContainsKey(e.Guild.Id))
+            if (!precisionCache.ContainsKey(e.Guild.Id))
             {
                 try
                 {
-                    PrecisionTableRecord precisionRecord = await _tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
-                    _precision[e.Guild.Id] = precisionRecord.Precision;
+                    PrecisionTableRecord precisionRecord = await tableClient.GetEntityAsync<PrecisionTableRecord>($"{e.Guild.Id}", "precision");
+                    precisionCache[e.Guild.Id] = precisionRecord.Precision;
                 }
                 catch (RequestFailedException)
                 {
                     // entity doesn't exist
-                    _precision[e.Guild.Id] = 4;
+                    precisionCache[e.Guild.Id] = 4;
                 }
             }
 
@@ -165,7 +157,7 @@ namespace freedman
 
             var message = converted == null
                 ? $"I don't know how to convert {unit.Units} into {target.Units}"
-                : $"{unit.Value}{extra} {unit.Units} is {Math.Round(converted.Value, _precision[e.Guild.Id])}{extra2} {converted.Units}";
+                : $"{unit.Value}{extra} {unit.Units} is {Math.Round(converted.Value, precisionCache[e.Guild.Id])}{extra2} {converted.Units}";
 
             await e.Message.RespondAsync(message);
         }
