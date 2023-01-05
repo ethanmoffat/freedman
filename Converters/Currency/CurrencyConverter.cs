@@ -12,7 +12,7 @@ namespace freedman.Converters.Currency
 {
     public abstract class CurrencyConverter : IUnitConverter, IDisposable
     {
-        private const string CurrencyConvertUrl = "https://free.currconv.com/api/v7/convert?q={0}&compact=ultra&apiKey={1}";
+        private const string CurrencyConvertUrl = "https://api.freecurrencyapi.com/v1/latest?apikey={0}&base_currency={1}&currencies={2}";
 
         private static readonly IDictionary<string, double> _cachedRates;
         private static readonly IDictionary<string, DateTime> _fetchTimes;
@@ -67,24 +67,19 @@ namespace freedman.Converters.Currency
             sourceCurrency = sourceCurrency.ToUpper();
             targetCurrency = targetCurrency.ToUpper();
 
-            var currencyString = sourceCurrency == "USD"
-                ? $"{sourceCurrency}_{targetCurrency}"
-                : $"{targetCurrency}_{sourceCurrency}";
-            var invert = sourceCurrency != "USD";
+            var currencyString = $"{sourceCurrency}_{targetCurrency}";
 
             if (!_cachedRates.ContainsKey(currencyString) || !_fetchTimes.ContainsKey(currencyString) || (DateTime.Now - _fetchTimes[currencyString]).TotalHours > 1)
             {
-                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, currencyString, _configurationProvider.Configuration["currency-api-key"]));
+                using var response = await _httpClient.GetAsync(string.Format(CurrencyConvertUrl, _configurationProvider.Configuration["currency-api-key"], sourceCurrency, targetCurrency));
                 if (!response.IsSuccessStatusCode)
                     throw new RequestFailedException($"Unable to contact currency conversion API (code {response.StatusCode})\nService status: https://www.currencyconverterapi.com/server-status");
                 var json = JObject.Parse(await response.Content.ReadAsStringAsync());
-                _cachedRates[currencyString] = json[currencyString].Value<double>();
+                _cachedRates[currencyString] = json["data"][targetCurrency].Value<double>();
                 _fetchTimes[currencyString] = DateTime.Now;
             }
 
-            var convertedValue = invert
-                ? value / _cachedRates[currencyString]
-                : value * _cachedRates[currencyString];
+            var convertedValue = value * _cachedRates[currencyString];
             return UnitFactory(convertedValue, targetCurrency);
         }
 
