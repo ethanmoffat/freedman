@@ -44,11 +44,12 @@ namespace freedman
 
         private static async Task OnMessageCreated(DiscordClient dc, MessageCreateEventArgs e)
         {
-            if (e.Author.IsBot)
+            var config = _registry.Resolve<Configuration.IConfigurationProvider>().Configuration;
+
+            if (e.Author.IsBot || !e.Message.Content.StartsWith(config["freedman-command-prefix"]))
                 return;
 
             var commands = _registry.ResolveAll<ICommand>();
-            var config = _registry.Resolve<Configuration.IConfigurationProvider>().Configuration;
 
             var messageParts = e.Message.Content.Split(new[] { " ", "\t", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var commandStartIndex = messageParts.Select((part, ndx) => WordIsCommandStart(part, config["freedman-command-prefix"]) ? ndx : -1)
